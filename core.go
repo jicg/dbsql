@@ -14,6 +14,21 @@ type DBsql struct {
 	db   *sql.DB
 }
 
+const (
+	Oracle = "oracle"
+)
+
+var dbmap = map[string]dber{
+	"oracle": &dbOracle{},
+}
+
+func New(db *sql.DB, otype string) *DBsql {
+	return &DBsql{
+		dbmap[otype],
+		db,
+	}
+}
+
 func (d *DBsql) SyncSqls(models ...interface{}) ([]string, error) {
 	var err error
 	if len(models) == 0 {
