@@ -59,7 +59,7 @@ func (db *dbOracle) getCreateSql(table *db_table) (string, error) {
 }
 
 func (db *dbOracle) getAddColumnSql(table *db_table, col *db_column) string {
-	sql := fmt.Sprintf(" ALTER TABLE %s ADD COLUMN  %s %s", strings.ToUpper(table.name), strings.ToUpper(col.name), strings.ToUpper(col.dbtype))
+	sql := fmt.Sprintf(" ALTER TABLE %s ADD  %s %s", strings.ToUpper(table.name), strings.ToUpper(col.name), strings.ToUpper(col.dbtype))
 	if col.hasdef {
 		sql += fmt.Sprintf(" default %v", col.defval)
 	}
