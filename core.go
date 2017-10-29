@@ -84,8 +84,9 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		}
 	} else {
 		db_columns := []string{}
-
-		rows, err := d.db.Query(d.DBer.DBGetColumnsSql(table.name));
+		sql := d.DBer.DBGetColumnsSql(table.name)
+		rows, err := d.db.Query(sql);
+		fmt.Println(sql)
 		defer rows.Close()
 		if err != nil {
 			return err
@@ -117,7 +118,9 @@ func (d *DBsql) SyscTable(table *db_table) error {
 			}
 		}
 		for _, col := range init_columns {
-			_, err = d.db.Exec(d.DBer.getAddColumnSql(table, col))
+			sql := d.DBer.getAddColumnSql(table, col)
+			_, err = d.db.Exec(sql)
+			fmt.Println(sql)
 			if err != nil {
 				return err
 			}
