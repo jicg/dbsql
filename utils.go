@@ -31,7 +31,7 @@ func getTableName(val reflect.Value) string {
 }
 
 func getExtraSql(val reflect.Value) []string {
-	if fun := val.MethodByName("ExtraSql"); fun.IsValid() {
+	if fun := val.MethodByName("getExtraSql"); fun.IsValid() {
 		vals := fun.Call([]reflect.Value{})
 		if len(vals) > 0 && vals[0].CanInterface(){
 			return vals[0].Interface().([]string)
