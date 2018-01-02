@@ -30,44 +30,84 @@ func New(db *sql.DB, otype string) *DBsql {
 	}
 }
 
-func (d *DBsql) SyncSqls(models ...interface{}) ([]string, error) {
-	var err error
-	if len(models) == 0 {
-		return nil, errors.New(" not exists models , invalid argument ! ")
-	}
-	sqls := make([]string, len(models))
-	for index, model := range models {
-		if sqls[index], err = d.SyncSql(model); err != nil {
-			return nil, err
-		}
-	}
-	return sqls, nil
-}
-
-func (d *DBsql) SyncSql(model interface{}) (string, error) {
-	if model == nil {
-		return "", errors.New(" not exists models , invalid argument ! ")
-	}
-	table, err := d.m2t(model)
-	if err != nil {
-		return "", err
-	}
-	var sql = ""
-	if sql, err = d.DBer.getCreateSql(table); err != nil {
-		return "", err
-	}
-	return sql, nil
-}
-
 func (d *DBsql) Sync(model interface{}) error {
 	if model == nil {
 		return errors.New(" not exists models , invalid argument ! ")
 	}
-	table, err := d.m2t(model)
+	table, err := d.Model2Table(model)
 	if err != nil {
 		return err
 	}
 	return d.SyscTable(table)
+}
+
+func (d *DBsql) SyncSqls(model interface{}) ([]string ,[]string ,error) {
+	if model == nil {
+		return nil,nil,errors.New(" not exists models , invalid argument ! ")
+	}
+	table, err := d.Model2Table(model)
+	if err != nil {
+		return nil,nil,err
+	}
+	return d.SyscTableSqls(table)
+}
+
+func (d *DBsql) SyscTableSqls(table *db_table) ([]string,[]string,error) {
+	sqls := []string{}
+	cnt := 0
+	row := d.db.QueryRow(d.DBer.DBCheckTableSql(table.name))
+	row.Scan(&cnt)
+	if cnt == 0 {
+		sql, err := d.DBer.getCreateSql(table)
+		if err != nil {
+			return nil,nil,err
+		}
+		if table.extrasql !=nil&&len(table.extrasql) > 0 {
+			size := len(table.extrasql);
+			for i:=0;i<size;i++ {
+				sqls = append(sqls,sql)
+			}
+		}
+	} else {
+		db_columns := []string{}
+		sql := d.DBer.DBGetColumnsSql(table.name)
+		rows, err := d.db.Query(sql)
+		defer rows.Close()
+		if err != nil {
+			return nil,nil,err
+		}
+		for rows.Next() {
+			var name string
+			if err = rows.Scan(&name); err != nil {
+				return nil,nil,err
+			}
+			db_columns = append(db_columns, name)
+		}
+		err = rows.Err()
+		if err != nil {
+			return nil,nil,err
+		}
+
+		init_columns := []*db_column{}
+
+		for _, col := range table.cols {
+			flag := false
+			for _, c2 := range db_columns {
+				if strings.ToLower(col.name) == strings.ToLower(c2) {
+					flag = true
+					break
+				}
+			}
+			if !flag {
+				init_columns = append(init_columns, col)
+			}
+		}
+		for _, col := range init_columns {
+			sql := d.DBer.getAddColumnSql(table, col)
+			sqls = append(sqls,sql)
+		}
+	}
+	return sqls,table.extrasql,nil
 }
 
 func (d *DBsql) SyscTable(table *db_table) error {
@@ -79,9 +119,15 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(sql)
 		if _, e := d.db.Exec(sql); e != nil {
 			return e
+		}
+		if table.extrasql !=nil&&len(table.extrasql) > 0 {
+			sql+=";"
+			size := len(table.extrasql);
+			for i:=0;i<size;i++ {
+				sql += "\n"+table.extrasql[i]+";"
+			}
 		}
 	} else {
 		db_columns := []string{}
@@ -140,7 +186,8 @@ func (d *DBsql) SyscTable(table *db_table) error {
 	return nil
 }
 
-func (d *DBsql) m2t(model interface{}) (*db_table, error) {
+
+func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 
 	val := reflect.ValueOf(model)
 	typ := reflect.Indirect(val).Type()
@@ -237,3 +284,37 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 		extrasqls,
 	}, nil
 }
+
+
+
+
+
+//-------------------------------------
+//func (d *DBsql) SyncSqls(models ...interface{}) ([]string, error) {
+//	var err error
+//	if len(models) == 0 {
+//		return nil, errors.New(" not exists models , invalid argument ! ")
+//	}
+//	sqls := make([]string, len(models))
+//	for index, model := range models {
+//		if sqls[index], err = d.SyncSql(model); err != nil {
+//			return nil, err
+//		}
+//	}
+//	return sqls, nil
+//}
+//
+//func (d *DBsql) SyncSql(model interface{}) (string, error) {
+//	if model == nil {
+//		return "", errors.New(" not exists models , invalid argument ! ")
+//	}
+//	table, err := d.m2t(model)
+//	if err != nil {
+//		return "", err
+//	}
+//	var sql = ""
+//	if sql, err = d.DBer.getCreateSql(table); err != nil {
+//		return "", err
+//	}
+//	return sql, nil
+//}
