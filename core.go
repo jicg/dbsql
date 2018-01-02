@@ -122,13 +122,6 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		if _, e := d.db.Exec(sql); e != nil {
 			return e
 		}
-		if table.extrasql !=nil&&len(table.extrasql) > 0 {
-			sql+=";"
-			size := len(table.extrasql);
-			for i:=0;i<size;i++ {
-				sql += "\n"+table.extrasql[i]+";"
-			}
-		}
 	} else {
 		db_columns := []string{}
 		sql := d.DBer.DBGetColumnsSql(table.name)
@@ -172,17 +165,14 @@ func (d *DBsql) SyscTable(table *db_table) error {
 				return err
 			}
 		}
-
-		if table.extrasql != nil && len(table.extrasql) > 0 {
-			for _, sql := range table.extrasql {
-				_, err = d.db.Exec(sql)
-				if err != nil {
-					fmt.Errorf(sql)
-				}
+	}
+	if table.extrasql != nil && len(table.extrasql) > 0 {
+		for _, sql := range table.extrasql {
+			if _, err := d.db.Exec(sql); err != nil {
+				fmt.Errorf(sql)
 			}
 		}
 	}
-
 	return nil
 }
 
