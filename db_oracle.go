@@ -55,8 +55,9 @@ func (db *dbOracle) getCreateSql(table *db_table) (string, error) {
 			sql += ",\n"
 		}
 	}
-	sql +=  "\n);"
+	sql +=  "\n)"
 	if table.extrasql !=nil&&len(table.extrasql) > 0 {
+		sql+=";"
 		size := len(table.extrasql);
 		for i:=0;i<size;i++ {
 			sql += "\n"+table.extrasql[i]+";"
