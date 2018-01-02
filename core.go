@@ -81,7 +81,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		}
 		fmt.Println(sql)
 		if _, e := d.db.Exec(sql); e != nil {
-			return err
+			return e
 		}
 	} else {
 		db_columns := []string{}
@@ -127,7 +127,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 			}
 		}
 
-		if table.extrasql!=nil && len(table.extrasql)>0 {
+		if table.extrasql != nil && len(table.extrasql) > 0 {
 			for _, sql := range table.extrasql {
 				_, err = d.db.Exec(sql)
 				if err != nil {
@@ -151,6 +151,7 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 		return nil, errors.New(fmt.Sprintf(" only allow ptr model struct, it looks you use two reference to the struct `%s`", typ))
 	}
 	table := getTableName(val)
+	extrasqls := getExtraSql(val)
 	cols := []*db_column{}
 	for i := 0; i < typ.NumField(); i++ {
 		fi := typ.Field(i)
@@ -233,6 +234,6 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 	return &db_table{
 		table,
 		cols,
-		nil,
+		extrasqls,
 	}, nil
 }
