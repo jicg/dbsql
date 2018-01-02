@@ -1,12 +1,13 @@
 package dbsql
 
 import (
-	"github.com/pkg/errors"
-	"reflect"
-	"fmt"
-	"strconv"
 	"database/sql"
+	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type DBsql struct {
@@ -47,7 +48,7 @@ func (d *DBsql) SyncSql(model interface{}) (string, error) {
 	if model == nil {
 		return "", errors.New(" not exists models , invalid argument ! ")
 	}
-	table, err := d.m2t(model);
+	table, err := d.m2t(model)
 	if err != nil {
 		return "", err
 	}
@@ -62,7 +63,7 @@ func (d *DBsql) Sync(model interface{}) error {
 	if model == nil {
 		return errors.New(" not exists models , invalid argument ! ")
 	}
-	table, err := d.m2t(model);
+	table, err := d.m2t(model)
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func (d *DBsql) Sync(model interface{}) error {
 }
 
 func (d *DBsql) SyscTable(table *db_table) error {
-	cnt := 0;
+	cnt := 0
 	row := d.db.QueryRow(d.DBer.DBCheckTableSql(table.name))
 	row.Scan(&cnt)
 	if cnt == 0 {
@@ -85,7 +86,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 	} else {
 		db_columns := []string{}
 		sql := d.DBer.DBGetColumnsSql(table.name)
-		rows, err := d.db.Query(sql);
+		rows, err := d.db.Query(sql)
 		fmt.Println(sql)
 		defer rows.Close()
 		if err != nil {
@@ -113,7 +114,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 					break
 				}
 			}
-			if (!flag) {
+			if !flag {
 				init_columns = append(init_columns, col)
 			}
 		}
@@ -126,7 +127,16 @@ func (d *DBsql) SyscTable(table *db_table) error {
 			}
 		}
 
+		if table.extrasql!=nil && len(table.extrasql)>0 {
+			for _, sql := range table.extrasql {
+				_, err = d.db.Exec(sql)
+				if err != nil {
+					fmt.Errorf(sql)
+				}
+			}
+		}
 	}
+
 	return nil
 }
 
@@ -151,26 +161,26 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 		}
 
 		col_def := b["default"]
-		col_haddef := false;
+		col_haddef := false
 		if len(col_def) > 0 {
-			col_haddef = true;
+			col_haddef = true
 		}
 
 		col_type := b["type"]
 		if len(col_type) == 0 {
 			switch fi.Type.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				cod_size := 10;
+				cod_size := 10
 				if size, err := strconv.Atoi(b["size"]); err != nil {
 					cod_size = size
 				}
-				if (cod_size <= 0) {
+				if cod_size <= 0 {
 					cod_size = 10
 				}
 				styp := d.DBer.getType(fi.Type)
 				col_type = fmt.Sprintf(styp, cod_size)
 			case reflect.Float32, reflect.Float64:
-				cod_digits := 10;
+				cod_digits := 10
 				if digits, err := strconv.Atoi(b["digits"]); err != nil {
 					cod_digits = digits
 				}
@@ -178,7 +188,7 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 					cod_digits = 10
 				}
 
-				cod_decimals := 2;
+				cod_decimals := 2
 				if decimals, err := strconv.Atoi(b["decimals"]); err != nil {
 					cod_decimals = decimals
 				}
@@ -188,7 +198,7 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 				styp := d.DBer.getType(fi.Type)
 				col_type = fmt.Sprintf(styp, cod_digits, cod_decimals)
 			case reflect.String:
-				cod_size := 80;
+				cod_size := 80
 				if size, err := strconv.Atoi(b["size"]); err != nil {
 					cod_size = size
 				}
@@ -200,9 +210,9 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 			}
 
 		}
-		col_name := b["column"];
+		col_name := b["column"]
 		if len(col_name) == 0 {
-			col_name = fi.Name;
+			col_name = fi.Name
 		}
 		col_pk := a["pk"]
 		col_index := a["index"]
@@ -223,5 +233,6 @@ func (d *DBsql) m2t(model interface{}) (*db_table, error) {
 	return &db_table{
 		table,
 		cols,
+		nil,
 	}, nil
 }

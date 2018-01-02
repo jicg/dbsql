@@ -1,9 +1,9 @@
 package dbsql
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
-	"fmt"
 )
 
 var supportTag = map[string]int{
@@ -30,6 +30,16 @@ func getTableName(val reflect.Value) string {
 	return reflect.Indirect(val).Type().Name()
 }
 
+func getExtraSql(val reflect.Value) []string {
+	if fun := val.MethodByName("ExtraSql"); fun.IsValid() {
+		vals := fun.Call([]reflect.Value{})
+		if len(vals) > 0 && vals[0].CanInterface(){
+			return vals[0].Interface().([]string)
+		}
+	}
+	return []string{}
+}
+
 func getFullName(typ reflect.Type) string {
 	return typ.PkgPath() + "." + typ.Name()
 }
@@ -47,7 +57,7 @@ func parseStructTag(data string) (attrs map[string]bool, tags map[string]string)
 		} else if i := strings.Index(v, "("); i > 0 && strings.LastIndex(v, ")") == len(v)-1 {
 			name := t[:i]
 			if supportTag[name] == 2 {
-				v = v[i+1: len(v)-1]
+				v = v[i+1 : len(v)-1]
 				tags[name] = v
 			}
 		} else {

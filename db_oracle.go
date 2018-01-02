@@ -1,10 +1,10 @@
 package dbsql
 
 import (
-	"fmt"
-	"strings"
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 )
 
 var oracleTypes = map[string]string{
@@ -55,7 +55,14 @@ func (db *dbOracle) getCreateSql(table *db_table) (string, error) {
 			sql += ",\n"
 		}
 	}
-	return sql + "\n)", nil
+	sql += sql + "\n);"
+	if table.extrasql !=nil&&len(table.extrasql) > 0 {
+		size := len(table.extrasql);
+		for i:=0;i<size;i++ {
+			sql += "\n"+table.extrasql[i]+";"
+		}
+	}
+	return sql, nil
 }
 
 func (db *dbOracle) getAddColumnSql(table *db_table, col *db_column) string {

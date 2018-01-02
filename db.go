@@ -13,8 +13,9 @@ type dbBase struct {
 }
 
 type db_table struct {
-	name string
-	cols []*db_column
+	name     string
+	cols     []*db_column
+	extrasql []string
 }
 
 type db_column struct {
