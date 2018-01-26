@@ -41,18 +41,18 @@ func (d *DBsql) Sync(model interface{}) error {
 	return d.SyscTable(table)
 }
 
-func (d *DBsql) SyncSqls(model interface{}) ([]string ,[]string ,error) {
+func (d *DBsql) SyncSqls(model interface{}) ([]string, []string, error) {
 	if model == nil {
-		return nil,nil,errors.New(" not exists models , invalid argument ! ")
+		return nil, nil, errors.New(" not exists models , invalid argument ! ")
 	}
 	table, err := d.Model2Table(model)
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
 	return d.SyscTableSqls(table)
 }
 
-func (d *DBsql) SyscTableSqls(table *db_table) ([]string,[]string,error) {
+func (d *DBsql) SyscTableSqls(table *db_table) ([]string, []string, error) {
 	sqls := []string{}
 	cnt := 0
 	row := d.db.QueryRow(d.DBer.DBCheckTableSql(table.name))
@@ -60,12 +60,12 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string,[]string,error) {
 	if cnt == 0 {
 		sql, err := d.DBer.getCreateSql(table)
 		if err != nil {
-			return nil,nil,err
+			return nil, nil, err
 		}
-		if table.extrasql !=nil&&len(table.extrasql) > 0 {
+		if table.extrasql != nil && len(table.extrasql) > 0 {
 			size := len(table.extrasql);
-			for i:=0;i<size;i++ {
-				sqls = append(sqls,sql)
+			for i := 0; i < size; i++ {
+				sqls = append(sqls, sql)
 			}
 		}
 	} else {
@@ -74,18 +74,18 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string,[]string,error) {
 		rows, err := d.db.Query(sql)
 		defer rows.Close()
 		if err != nil {
-			return nil,nil,err
+			return nil, nil, err
 		}
 		for rows.Next() {
 			var name string
 			if err = rows.Scan(&name); err != nil {
-				return nil,nil,err
+				return nil, nil, err
 			}
 			db_columns = append(db_columns, name)
 		}
 		err = rows.Err()
 		if err != nil {
-			return nil,nil,err
+			return nil, nil, err
 		}
 
 		init_columns := []*db_column{}
@@ -104,10 +104,10 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string,[]string,error) {
 		}
 		for _, col := range init_columns {
 			sql := d.DBer.getAddColumnSql(table, col)
-			sqls = append(sqls,sql)
+			sqls = append(sqls, sql)
 		}
 	}
-	return sqls,table.extrasql,nil
+	return sqls, table.extrasql, nil
 }
 
 func (d *DBsql) SyscTable(table *db_table) error {
@@ -176,10 +176,10 @@ func (d *DBsql) SyscTable(table *db_table) error {
 	return nil
 }
 
-
 func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 
 	val := reflect.ValueOf(model)
+	field:=reflect.Indirect(val)
 	typ := reflect.Indirect(val).Type()
 	if val.Kind() != reflect.Ptr {
 		return nil, errors.New(fmt.Sprintf(" cannot use non-ptr model struct `%s`", getFullName(typ)))
@@ -190,6 +190,9 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 	table := getTableName(val)
 	extrasqls := getExtraSql(val)
 	cols := []*db_column{}
+	d.Test(cols,field)
+	fmt.Printf("%v",cols)
+	/**
 	for i := 0; i < typ.NumField(); i++ {
 		fi := typ.Field(i)
 		a, b := parseStructTag(fi.Tag.Get(defaultStructTagName))
@@ -267,7 +270,7 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 			notnull:    col_notnull,
 		})
 	}
-
+	**/
 	return &db_table{
 		table,
 		cols,
@@ -275,9 +278,94 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 	}, nil
 }
 
+func (d *DBsql) Test(cols []*db_column, fv reflect.Value) {
+	var (
+		fi reflect.StructField
+	)
+	for i := 0; i < fv.NumField(); i++ {
+		field := fv.Field(i)
+		fi = fv.Type().Field(i)
+		a, b := parseStructTag(fi.Tag.Get(defaultStructTagName))
 
+		if a["-"] {
+			continue
+		}
 
+		if fi.Anonymous {
+			d.Test(cols, field)
+			continue
+		}
 
+		col_def := b["default"]
+		col_haddef := false
+		if len(col_def) > 0 {
+			col_haddef = true
+		}
+
+		col_type := b["type"]
+		if len(col_type) == 0 {
+			switch fi.Type.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				cod_size := 10
+				if size, err := strconv.Atoi(b["size"]); err != nil {
+					cod_size = size
+				}
+				if cod_size <= 0 {
+					cod_size = 10
+				}
+				styp := d.DBer.getType(fi.Type)
+				col_type = fmt.Sprintf(styp, cod_size)
+			case reflect.Float32, reflect.Float64:
+				cod_digits := 10
+				if digits, err := strconv.Atoi(b["digits"]); err != nil {
+					cod_digits = digits
+				}
+				if cod_digits <= 0 {
+					cod_digits = 10
+				}
+
+				cod_decimals := 2
+				if decimals, err := strconv.Atoi(b["decimals"]); err != nil {
+					cod_decimals = decimals
+				}
+				if cod_decimals <= 0 {
+					cod_decimals = 2
+				}
+				styp := d.DBer.getType(fi.Type)
+				col_type = fmt.Sprintf(styp, cod_digits, cod_decimals)
+			case reflect.String:
+				cod_size := 80
+				if size, err := strconv.Atoi(b["size"]); err != nil {
+					cod_size = size
+				}
+				if cod_size <= 0 {
+					cod_size = 80
+				}
+				styp := d.DBer.getType(fi.Type)
+				col_type = fmt.Sprintf(styp, cod_size)
+			}
+
+		}
+		col_name := b["column"]
+		if len(col_name) == 0 {
+			col_name = fi.Name
+		}
+		col_pk := a["pk"]
+		col_index := a["index"]
+		col_unique := a["unique"]
+		col_notnull := a["notnull"]
+		cols = append(cols, &db_column{
+			name:       col_name,
+			dbtype:     col_type,
+			defval:     col_def,
+			hasdef:     col_haddef,
+			primaryKey: col_pk,
+			index:      col_index,
+			unique:     col_unique,
+			notnull:    col_notnull,
+		})
+	}
+}
 
 //-------------------------------------
 //func (d *DBsql) SyncSqls(models ...interface{}) ([]string, error) {
