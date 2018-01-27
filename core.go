@@ -190,7 +190,12 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 	table := getTableName(val)
 	extrasqls := getExtraSql(val)
 	cols := []*db_column{}
-	d.Test(cols,field)
+	tableobj:=&db_table{
+		table,
+		cols,
+		extrasqls,
+	}
+	d.Test(tableobj,field)
 	fmt.Printf("%v",cols)
 	/**
 	for i := 0; i < typ.NumField(); i++ {
@@ -271,14 +276,10 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 		})
 	}
 	**/
-	return &db_table{
-		table,
-		cols,
-		extrasqls,
-	}, nil
+	return tableobj, nil
 }
 
-func (d *DBsql) Test(cols []*db_column, fv reflect.Value) {
+func (d *DBsql) Test(tableobj *db_table, fv reflect.Value) {
 	var (
 		fi reflect.StructField
 	)
@@ -292,7 +293,7 @@ func (d *DBsql) Test(cols []*db_column, fv reflect.Value) {
 		}
 
 		if fi.Anonymous {
-			d.Test(cols, field)
+			d.Test(tableobj, field)
 			continue
 		}
 
@@ -354,7 +355,7 @@ func (d *DBsql) Test(cols []*db_column, fv reflect.Value) {
 		col_index := a["index"]
 		col_unique := a["unique"]
 		col_notnull := a["notnull"]
-		cols = append(cols, &db_column{
+		tableobj.cols = append(tableobj.cols, &db_column{
 			name:       col_name,
 			dbtype:     col_type,
 			defval:     col_def,
