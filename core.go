@@ -119,6 +119,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		if err != nil {
 			return err
 		}
+		fmt.Printf("%s \n", sql)
 		if _, e := d.db.Exec(sql); e != nil {
 			return e
 		}
@@ -179,7 +180,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 
 	val := reflect.ValueOf(model)
-	field:=reflect.Indirect(val)
+	field := reflect.Indirect(val)
 	typ := reflect.Indirect(val).Type()
 	if val.Kind() != reflect.Ptr {
 		return nil, errors.New(fmt.Sprintf(" cannot use non-ptr model struct `%s`", getFullName(typ)))
@@ -190,13 +191,13 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 	table := getTableName(val)
 	extrasqls := getExtraSql(val)
 	cols := []*db_column{}
-	tableobj:=&db_table{
+	tableobj := &db_table{
 		table,
 		cols,
 		extrasqls,
 	}
-	d.Test(tableobj,field)
-	fmt.Printf("%v",cols)
+	d.loadColumnInfo(tableobj, field)
+	fmt.Printf("%v", cols)
 	/**
 	for i := 0; i < typ.NumField(); i++ {
 		fi := typ.Field(i)
@@ -279,7 +280,7 @@ func (d *DBsql) Model2Table(model interface{}) (*db_table, error) {
 	return tableobj, nil
 }
 
-func (d *DBsql) Test(tableobj *db_table, fv reflect.Value) {
+func (d *DBsql) loadColumnInfo(tableobj *db_table, fv reflect.Value) {
 	var (
 		fi reflect.StructField
 	)
@@ -293,7 +294,7 @@ func (d *DBsql) Test(tableobj *db_table, fv reflect.Value) {
 		}
 
 		if fi.Anonymous {
-			d.Test(tableobj, field)
+			d.loadColumnInfo(tableobj, field)
 			continue
 		}
 
