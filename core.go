@@ -1,18 +1,19 @@
 package dbsql
 
 import (
-	"database/sql"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
+	"errors"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type DBsql struct {
 	DBer dber
-	db   *sql.DB
+	db   *sqlx.DB
 }
 
 const (
@@ -23,7 +24,7 @@ var dbmap = map[string]dber{
 	"oracle": &dbOracle{},
 }
 
-func New(db *sql.DB, otype string) *DBsql {
+func New(db *sqlx.DB, otype string) *DBsql {
 	return &DBsql{
 		dbmap[otype],
 		db,
@@ -112,10 +113,12 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string, []string, error) {
 
 func (d *DBsql) SyscTable(table *db_table) error {
 	cnt := 0
-	row := d.db.QueryRow(d.DBer.DBCheckTableSql(table.name))
-	row.Scan(&cnt)
+	if err:= d.db.Get(&cnt,d.DBer.DBCheckTableSql(table.name));err!=nil{
+		return errors.New("sql:"+d.DBer.DBCheckTableSql(table.name)+",err:"+err.Error())
+	}
 	if cnt == 0 {
 		sql, err := d.DBer.getCreateSql(table)
+		fmt.Println(sql);
 		if err != nil {
 			return err
 		}
@@ -148,7 +151,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		for _, col := range table.cols {
 			flag := false
 			for _, c2 := range db_columns {
-				if strings.ToLower(col.name) == strings.ToLower(c2) {
+				if  strings.Compare(strings.ToLower(col.name),strings.ToLower(c2))  == 0 {
 					flag = true
 					break
 				}
