@@ -76,7 +76,7 @@ func (db *dbOracle) getType(typ reflect.Type) string {
 }
 
 func (d *dbOracle) DBCheckTableSql(table string) string {
-	return fmt.Sprintf("SELECT count(1) FROM USER_TABLES WHERE TABLE_NAME = '%s'", strings.ToUpper(table))
+	return fmt.Sprintf("SELECT count(1)||'' FROM USER_TABLES WHERE TABLE_NAME = '%s'", strings.ToUpper(table))
 }
 
 // Oracle

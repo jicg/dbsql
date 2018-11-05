@@ -112,10 +112,18 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string, []string, error) {
 }
 
 func (d *DBsql) SyscTable(table *db_table) error {
-	cnt := 0
-	if err:= d.db.Get(&cnt,d.DBer.DBCheckTableSql(table.name));err!=nil{
+	email :="";
+	if err:=d.db.Get(&email,"SELECT count(1)||'' FROM USER_TABLES WHERE TABLE_NAME = 'PDA_PHONEFLAG_KEY'");err!=nil{
+		fmt.Println("fial:",err)
+	}
+	fmt.Println(email)
+
+	cntstr :=""
+	if err:= d.db.Get(&cntstr,d.DBer.DBCheckTableSql(table.name));err!=nil{
 		return errors.New("sql:"+d.DBer.DBCheckTableSql(table.name)+",err:"+err.Error())
 	}
+	fmt.Println("  cntstr:"+cntstr)
+	cnt,_:= strconv.Atoi(cntstr);
 	if cnt == 0 {
 		sql, err := d.DBer.getCreateSql(table)
 		fmt.Println(sql);
