@@ -63,20 +63,21 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string, []string, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if table.extrasql != nil && len(table.extrasql) > 0 {
-			size := len(table.extrasql);
-			for i := 0; i < size; i++ {
-				sqls = append(sqls, sql)
-			}
-		}
+		sqls = append(sqls, sql)
+		//if table.extrasql != nil && len(table.extrasql) > 0 {
+		//	size := len(table.extrasql)
+		//	for i := 0; i < size; i++ {
+		//		sqls = append(sqls, table.extrasql[i])
+		//	}
+		//}
 	} else {
 		db_columns := []string{}
 		sql := d.DBer.DBGetColumnsSql(table.name)
 		rows, err := d.db.Query(sql)
-		defer rows.Close()
 		if err != nil {
 			return nil, nil, err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var name string
 			if err = rows.Scan(&name); err != nil {
@@ -111,22 +112,48 @@ func (d *DBsql) SyscTableSqls(table *db_table) ([]string, []string, error) {
 	return sqls, table.extrasql, nil
 }
 
+func (d *DBsql) SyncSql2s(model interface{}) ([]string, []string, error) {
+	if model == nil {
+		return nil, nil, errors.New(" not exists models , invalid argument ! ")
+	}
+	table, err := d.Model2Table(model)
+	if err != nil {
+		return nil, nil, err
+	}
+	return d.SyscTableSql2s(table)
+}
+func (d *DBsql) SyscTableSql2s(table *db_table) ([]string, []string, error) {
+	sqls := []string{}
+	sql, err := d.DBer.getCreateSql(table)
+	if err != nil {
+		return nil, nil, err
+	}
+	sqls = append(sqls, sql)
+	if table.extrasql != nil && len(table.extrasql) > 0 {
+		size := len(table.extrasql)
+		for i := 0; i < size; i++ {
+			sqls = append(sqls, table.extrasql[i])
+		}
+	}
+	return sqls, table.extrasql, nil
+}
+
 func (d *DBsql) SyscTable(table *db_table) error {
-	email :="";
-	if err:=d.db.Get(&email,"SELECT count(1)||'' FROM USER_TABLES WHERE TABLE_NAME = 'PDA_PHONEFLAG_KEY'");err!=nil{
-		fmt.Println("fial:",err)
+	email := ""
+	if err := d.db.Get(&email, "SELECT count(1)||'' FROM USER_TABLES WHERE TABLE_NAME = 'PDA_PHONEFLAG_KEY'"); err != nil {
+		fmt.Println("fial:", err)
 	}
 	fmt.Println(email)
 
-	cntstr :=""
-	if err:= d.db.Get(&cntstr,d.DBer.DBCheckTableSql(table.name));err!=nil{
-		return errors.New("sql:"+d.DBer.DBCheckTableSql(table.name)+",err:"+err.Error())
+	cntstr := ""
+	if err := d.db.Get(&cntstr, d.DBer.DBCheckTableSql(table.name)); err != nil {
+		return errors.New("sql:" + d.DBer.DBCheckTableSql(table.name) + ",err:" + err.Error())
 	}
-	fmt.Println("  cntstr:"+cntstr)
-	cnt,_:= strconv.Atoi(cntstr);
+	fmt.Println("  cntstr:" + cntstr)
+	cnt, _ := strconv.Atoi(cntstr)
 	if cnt == 0 {
 		sql, err := d.DBer.getCreateSql(table)
-		fmt.Println(sql);
+		fmt.Println(sql)
 		if err != nil {
 			return err
 		}
@@ -160,7 +187,7 @@ func (d *DBsql) SyscTable(table *db_table) error {
 		for _, col := range table.cols {
 			flag := false
 			for _, c2 := range db_columns {
-				if  strings.Compare(strings.ToLower(col.name),strings.ToLower(c2))  == 0 {
+				if strings.Compare(strings.ToLower(col.name), strings.ToLower(c2)) == 0 {
 					flag = true
 					break
 				}
